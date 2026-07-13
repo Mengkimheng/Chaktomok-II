@@ -1,0 +1,392 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window = Rayfield:CreateWindow({
+   Name = "Chaktomuk II",
+   Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   LoadingTitle = "lol",
+   LoadingSubtitle = "by Heng",
+   ShowText = "Wellcom", -- for mobile users to unhide Rayfield, change if you'd like
+   Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+
+   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false, -- Prevents Rayfield from emitting warnings when the script has a version mismatch with the interface.
+
+   -- ScriptID = "sid_xxxxxxxxxxxx", -- Your Script ID from developer.sirius.menu — enables analytics, managed keys, and script hosting
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "Big Hub"
+   },
+
+   Discord = {
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "", -- The Discord invite code, do not include Discord.gg/. E.g. Discord.gg/ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the Discord every time they load it up
+   },
+
+   KeySystem = false, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
+      FileName = "Key", -- It is recommended to use something unique, as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"Hello"} -- List of keys that the system will accept, can be RAW file links (pastebin, github, etc.) or simple strings ("hello", "key22")
+   }
+})
+local Tab = Window:CreateTab("Farm",) -- Title, Image
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local LocalPlayer = Players.LocalPlayer
+
+local FishingSystem = ReplicatedStorage:WaitForChild("FishingSystem", 7)
+if not FishingSystem then return warn("[Error] មិនរកឃើញប្រព័ន្ធស្ទូចត្រីទេ!") end
+
+local FishingModules = FishingSystem:WaitForChild("FishingModules", 5)
+local ShakeSystem = FishingModules and require(FishingModules:WaitForChild("ShakeSystem"))
+local MinigameSystem = FishingModules and require(FishingModules:WaitForChild("MinigameSystem"))
+
+-- Configuration Flag (កំណត់លំនាំដើមជា false)
+_G.AutoFishingPerfectV16 = false
+
+local function getRodAndRemotes()
+    local character = LocalPlayer.Character
+    if not character then return nil, nil end
+    
+    local tool = character:FindFirstChildOfClass("Tool")
+    if not tool then
+        for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
+            if item:IsA("Tool") and (string.find(string.lower(item.Name), "rod") or item.Name == "Umbrella") then
+                item.Parent = character
+                task.wait(0.5)
+                tool = item
+                break
+            end
+        end
+    end
+    
+    if tool then
+        local tapRemote = FishingSystem:FindFirstChild("Tap") or FishingSystem:FindFirstChild("Click") or FishingSystem:FindFirstChild("Reel")
+        return tool, tapRemote
+    end
+    return nil, nil
+end
+
+-- Humanized Mouse Clicks
+local function humanMouseClick()
+    local centerX = workspace.CurrentCamera.ViewportSize.X / 2
+    local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
+    pcall(function()
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
+        task.wait(math.random(3, 6) / 100)
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
+    end)
+end
+
+local function holdMouseLeftClick(seconds)
+    pcall(function()
+        local centerX = workspace.CurrentCamera.ViewportSize.X / 2
+        local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
+        task.wait(seconds)
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
+    end)
+end
+
+-- Shake Mechanics
+local function forceClickShake(shakeButton)
+    if not shakeButton or not shakeButton.Visible then return end
+    
+    while shakeButton.Visible and _G.AutoFishingPerfectV16 do
+        local connections = getconnections or get_signal_cons
+        if connections then
+            for _, clickedConnection in ipairs(connections(shakeButton.MouseButton1Click)) do clickedConnection:Fire() end
+        end
+        
+        if ShakeSystem and ShakeSystem.isActive then
+            pcall(function()
+                ShakeSystem:HandleClick(nil)
+            end)
+        end
+        task.wait(math.random(7, 12) / 100)
+    end
+    task.wait(0.15)
+    humanMouseClick()
+end
+
+-- Background Loops
+task.spawn(function()
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local fishingGui = playerGui:WaitForChild("FishingGui", 5)
+    if fishingGui then
+        local shakeButton = fishingGui:WaitForChild("ShakeButton", 5)
+        if shakeButton then
+            shakeButton:GetPropertyChangedSignal("Visible"):Connect(function()
+                if shakeButton.Visible and _G.AutoFishingPerfectV16 then 
+                    task.wait(math.random(10, 25) / 100)
+                    forceClickShake(shakeButton) 
+                end
+            end)
+        end
+    end
+end)
+
+-- 🛠️ ផ្នែកកែសម្រួល៖ ប្តូរមកចុចទាញត្រីចំនួន ១៦ ទៅ ១៨ ដងច្បាស់លាស់
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if _G.AutoFishingPerfectV16 and MinigameSystem and MinigameSystem:IsActive() then
+            local _, tapRemote = getRodAndRemotes()
+            
+            -- កំណត់ចំនួនដងចៃដន្យចន្លោះពី ១៦ ទៅ ១៨ ដង តាមសំណូមពររបស់អ្នក
+            local requiredClicks = math.random(17, 26)
+            local clickCount = 0
+            
+            print("រកឃើញត្រីជាប់សន្ទូច! ចាប់ផ្តើមចុចទាញចំនួន: " .. requiredClicks .. " ដង")
+            
+            while MinigameSystem:IsActive() and _G.AutoFishingPerfectV16 and clickCount < requiredClicks do
+                if tapRemote then 
+                    tapRemote:FireServer() 
+                end
+                
+                humanMouseClick()
+                clickCount = clickCount + 1
+                task.wait(math.random(11, 16) / 100) 
+            end
+            
+            while MinigameSystem:IsActive() do
+                task.wait(0.1)
+            end
+            task.wait(1.0)
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(1.0)
+        if _G.AutoFishingPerfectV16 then
+            local currentRod, _ = getRodAndRemotes()
+            if currentRod then
+                local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+                local fishingGui = playerGui and playerGui:FindFirstChild("FishingGui")
+                local shakeButton = fishingGui and fishingGui:FindFirstChild("ShakeButton")
+                local fishingFrame = fishingGui and fishingGui:FindFirstChild("Fishing")
+                
+                local isBusy = false
+                if (shakeButton and shakeButton.Visible) or (fishingFrame and fishingFrame.Visible) then isBusy = true end
+                if (ShakeSystem and ShakeSystem.isActive) or (MinigameSystem and MinigameSystem:IsActive()) then isBusy = true end
+                
+                if not isBusy then
+                    currentRod:Activate()
+                    task.wait(0.2)
+                    holdMouseLeftClick(math.random(8, 12) / 10)
+                    task.wait(math.random(25, 35) / 10)
+                end
+            end
+        end
+    end
+end)
+
+-- Essential Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+-- Configuration Setup
+local spots = {
+    "DeliverySpot", "DeliverySpot1", "DeliverySpot2", "DeliverySpot3", 
+    "DeliverySpot4", "DeliverySpot5", "DeliverySpot6", "DeliverySpot7", 
+    "DeliverySpot8", "DeliverySpot9"
+}
+local FOOD_ITEM_NAME = "Food" 
+local isScriptRunning = false -- Track toggle state
+
+-- Helper Functions
+local function humanWait(min, max)
+    local randomTime = math.random(min * 100, max * 100) / 100
+    task.wait(randomTime)
+end
+
+local function hasFood()
+    local character = player.Character
+    if character and character:FindFirstChild(FOOD_ITEM_NAME) then return true end
+    if player.Backpack:FindFirstChild(FOOD_ITEM_NAME) then return true end
+    
+    if character then
+        for _, child in ipairs(character:GetChildren()) do
+            if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then return true end
+        end
+    end
+    for _, child in ipairs(player.Backpack:GetChildren()) do
+        if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then return true end
+    end
+    return false
+end
+
+local function findActiveDeliverySpot(deliveryLocation)
+    if not deliveryLocation then return nil end
+    for _, spotName in ipairs(spots) do
+        local spotPart = deliveryLocation:FindFirstChild(spotName)
+        if spotPart and spotPart:IsA("BasePart") then
+            if math.abs(spotPart.Transparency - 0.4) < 0.05 then
+                return spotPart
+            end
+        end
+    end
+    return nil
+end
+
+-- Anti-Ban Teleport Engine
+local function antiBanTeleport(targetPart)
+    local character = player.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    if not rootPart or not targetPart then return end
+    
+    rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+    rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    
+    local noclip = RunService.Stepped:Connect(function()
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+    end)
+    
+    local offsetX = (math.random(-10, 10) / 10)
+    local offsetZ = (math.random(-10, 10) / 10)
+    local targetPos = targetPart.Position + Vector3.new(offsetX, 2.0, offsetZ)
+    
+    rootPart.CFrame = CFrame.new(targetPos)
+    
+    rootPart.Anchored = true
+    task.wait(0.05)
+    rootPart.Anchored = false
+    
+    rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+    rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    
+    noclip:Disconnect()
+    humanWait(0.08, 0.18)
+end
+
+-- Core Delivery Engine Run Routine
+local function runDeliveryRoutine()
+    while isScriptRunning do
+        local character = player.Character or player.CharacterAdded:Wait()
+        local rootPart = character:WaitForChild("HumanoidRootPart")
+        
+        local targetPart = workspace.Building["Prop Building"].FoodPickup
+        local deliveryLocation = workspace:FindFirstChild("DeliveryLocation")
+        
+        print("--- Start New Anti-Ban Sequence ---")
+
+        -- Step 1: Collect Food
+        if targetPart and rootPart and not hasFood() then
+            local attempt = 0
+            while not hasFood() and attempt < 5 and isScriptRunning do
+                attempt = attempt + 1
+                print("Teleporting to FoodPickup... Attempt: " .. attempt)
+                
+                antiBanTeleport(targetPart)
+                
+                local prompt = targetPart:FindFirstChildOfClass("ProximityPrompt")
+                if not prompt then
+                    prompt = workspace.Building["Prop Building"].FoodPickup:FindFirstChildOfClass("ProximityPrompt")
+                end
+                
+                if prompt then
+                    prompt.RequiresLineOfSight = false
+                    prompt.HoldDuration = 0 
+                    task.wait(0.02)
+                    prompt:InputHoldBegin()
+                    prompt:InputHoldEnd()
+                else
+                    print("[Warning] ProximityPrompt not found!")
+                end
+                task.wait(0.5) 
+            end
+        end
+
+        if not isScriptRunning then break end
+        humanWait(0.2, 0.5)
+
+        -- Step 2: Deliver Food
+        if deliveryLocation and rootPart and hasFood() then
+            local activeSpot = nil
+            local scanAttempt = 0
+            
+            while not activeSpot and scanAttempt < 10 and isScriptRunning do
+                scanAttempt = scanAttempt + 1
+                activeSpot = findActiveDeliverySpot(deliveryLocation)
+                if not activeSpot then task.wait(0.1) end
+            end
+            
+            if activeSpot and isScriptRunning then
+                print("🎯 Found Spot: " .. activeSpot.Name .. " | Teleporting...")
+                antiBanTeleport(activeSpot)
+                
+                local deliveryPrompt = activeSpot:FindFirstChildOfClass("ProximityPrompt")
+                if deliveryPrompt then
+                    deliveryPrompt.RequiresLineOfSight = false
+                    deliveryPrompt.HoldDuration = 0
+                    task.wait(0.02)
+                    deliveryPrompt:InputHoldBegin()
+                    deliveryPrompt:InputHoldEnd()
+                end
+                
+                humanWait(1.5, 2.5)
+                print("✅ Successfully Delivered!")
+            else
+                print("[Warning] No active delivery zone found!")
+            end
+        end
+
+        if not isScriptRunning then break end
+
+        -- Safe Cooldown Cycle
+        local cooldown = math.random(61, 71)
+        print("--- Cycle Finished. Anticheat Spoof Cooldown: " .. cooldown .. "s ---")
+        
+        -- Safe chunked wait loop to keep UI highly responsive to toggle turns
+        for i = 1, cooldown do
+            if not isScriptRunning then break end
+            task.wait(1)
+        end
+    end
+end
+
+-- Rayfield UI Toggle Linkage
+local Toggle = Tab:CreateToggle({
+   Name = "Auto Deliver Food",
+   CurrentValue = false,
+   Flag = "AutoDeliverFlag", 
+   Callback = function(Value)
+       isScriptRunning = Value
+       
+       if Value then
+           -- Spawns the automation sequence loop asynchronously
+           task.spawn(runDeliveryRoutine)
+       else
+           print("🛑 Auto Deliver System Stopped.")
+       end
+   end,
+})
+
+-- Rayfield Toggle UI Component
+local Toggle = Tab:CreateToggle({
+   Name = "Auto Fishing",
+   CurrentValue = false,
+   Flag = "AutoFishing16Flag", 
+   Callback = function(Value)
+       _G.AutoFishingPerfectV16 = Value
+   end,
+})
+
