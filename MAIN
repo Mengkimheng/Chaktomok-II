@@ -529,7 +529,7 @@ local ToggleMobile = Tab:CreateToggle({
 })
 
 local Slider = Tab:CreateSlider({
-    Name = '<font size="24"><b>ចំនួនចង់ទិញ</b></font>Fishing',
+    Name = '<font size="24"><b>ចំនួនចង់ទិញ</b></font>Amoun',
     Range = {0, 100},
     Increment = 10,
     Suffix = "Bait",
