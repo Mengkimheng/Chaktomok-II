@@ -443,7 +443,7 @@ end
 
 -- Rayfield UI Toggle Linkage
 local Toggle = Tab:CreateToggle({
-   Name = "Auto Deliver Food",
+   Name = '<font size="24"><b>ដឹកអីវ៉ាន​</b></font>Delivery',
    CurrentValue = false,
    Flag = "AutoDeliverFlag", 
    Callback = function(Value)
@@ -460,7 +460,7 @@ local Toggle = Tab:CreateToggle({
 
 -- Rayfield Toggle UI Component
 local Toggle = Tab:CreateToggle({
-   Name = "Auto Fishing",
+   Name = '<font size="24"><b>ស្ទូចដោយខ្លួនអែង</b></font>Fishing',
    CurrentValue = false,
    Flag = "AutoFishing16Flag", 
    Callback = function(Value)
