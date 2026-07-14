@@ -42,6 +42,7 @@ local Tab = Window:CreateTab("Farm") -- Title, Image
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local UserInputService = game:GetService("UserInputService") -- បន្ថែមសម្រាប់ស្កេនរក Mobile
 local LocalPlayer = Players.LocalPlayer
 
 local FishingSystem = ReplicatedStorage:WaitForChild("FishingSystem", 7)
@@ -77,7 +78,9 @@ local function getRodAndRemotes()
     return nil, nil
 end
 
--- Humanized Mouse Clicks
+-- ==========================================
+-- [កូដសម្រាប់ PC ដើមរបស់បង រក្សាទុកដដែល ១០០%]
+-- ==========================================
 local function humanMouseClick()
     local centerX = workspace.CurrentCamera.ViewportSize.X / 2
     local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
@@ -98,7 +101,6 @@ local function holdMouseLeftClick(seconds)
     end)
 end
 
--- Shake Mechanics
 local function forceClickShake(shakeButton)
     if not shakeButton or not shakeButton.Visible then return end
     
@@ -118,8 +120,61 @@ local function forceClickShake(shakeButton)
     task.wait(0.15)
     humanMouseClick()
 end
+-- ==========================================
 
--- Background Loops
+
+-- 🛠️ ផ្នែកបន្ថែម៖ បើរកឃើញថាជាទូរស័ព្ទ (Mobile) វានឹងប្តូរទៅប្រើប្រព័ន្ធ Touch ជំនួសដោយស្វ័យប្រវត្ត
+-- (បើលេងលើ PC វានឹងរំលងផ្នែកនេះចោល ធ្វើឱ្យ PC រត់កូដចាស់ធម្មតា ១០០%)
+if UserInputService.TouchEnabled then
+    -- កែសម្រួលការចុចឱ្យត្រូវនឹង Mobile Touch
+    humanMouseClick = function()
+        local centerX = workspace.CurrentCamera.ViewportSize.X / 2
+        local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
+        pcall(function()
+            VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.Begin, centerX, centerY)
+            task.wait(math.random(3, 6) / 100)
+            VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.End, centerX, centerY)
+        end)
+    end
+
+    holdMouseLeftClick = function(seconds)
+        pcall(function()
+            local centerX = workspace.CurrentCamera.ViewportSize.X / 2
+            local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
+            VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.Begin, centerX, centerY)
+            task.wait(seconds)
+            VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.End, centerX, centerY)
+        end)
+    end
+
+    -- កែសម្រួល Shake សម្រាប់ទូរស័ព្ទ (គាំទ្រការចុច Activated Event)
+    forceClickShake = function(shakeButton)
+        if not shakeButton or not shakeButton.Visible then return end
+        
+        while shakeButton.Visible and _G.AutoFishingPerfectV16 do
+            local connections = getconnections or get_signal_cons
+            if connections then
+                for _, clickedConnection in ipairs(connections(shakeButton.MouseButton1Click)) do clickedConnection:Fire() end
+                -- បន្ថែមសម្រាប់ Mobile Touch UI
+                pcall(function()
+                    for _, clickedConnection in ipairs(connections(shakeButton.Activated)) do clickedConnection:Fire() end
+                end)
+            end
+            
+            if ShakeSystem and ShakeSystem.isActive then
+                pcall(function()
+                    ShakeSystem:HandleClick(nil)
+                end)
+            end
+            task.wait(math.random(7, 12) / 100)
+        end
+        task.wait(0.15)
+        humanMouseClick()
+    end
+end
+
+
+-- Background Loops (រក្សារចនាសម្ព័ន្ធដើម)
 task.spawn(function()
     local playerGui = LocalPlayer:WaitForChild("PlayerGui")
     local fishingGui = playerGui:WaitForChild("FishingGui", 5)
