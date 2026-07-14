@@ -41,9 +41,8 @@ local Tab = Window:CreateTab("Farm") -- Title, Image
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local UserInputService = game:GetService("UserInputService") -- បន្ថែមសម្រាប់ស្កេនរក Mobile
 local LocalPlayer = Players.LocalPlayer
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local FishingSystem = ReplicatedStorage:WaitForChild("FishingSystem", 7)
 if not FishingSystem then return warn("[Error] មិនរកឃើញប្រព័ន្ធស្ទូចត្រីទេ!") end
@@ -51,9 +50,22 @@ if not FishingSystem then return warn("[Error] មិនរកឃើញប្រ
 local FishingModules = FishingSystem:WaitForChild("FishingModules", 5)
 local ShakeSystem = FishingModules and require(FishingModules:WaitForChild("ShakeSystem"))
 local MinigameSystem = FishingModules and require(FishingModules:WaitForChild("MinigameSystem"))
+local PowerBarSystem = FishingModules and FishingModules:FindFirstChild("PowerBarSystem") and require(FishingModules.PowerBarSystem)
 
--- Configuration Flag (កំណត់លំនាំដើមជា false)
+-- Configuration Flag
 _G.AutoFishingPerfectV16 = false
+
+-- កំណត់ត្រាចំនួនត្រីដែលស្ទូចបាន ដើម្បីធ្វើការសម្រាកស្វ័យប្រវត្តិ (Anti-Pattern Break)
+local fishCaughtSession = 0
+local nextBreakLimit = math.random(5, 12) -- សម្រាកម្តងរាល់ពេលស្ទូចបានចន្លោះពី ៥ ទៅ ១២ ក្បាល
+
+-- ជំនួយការបង្កើតល្បឿនចៃដន្យបែបធម្មជាតិ (Human Focus Simulator ជំនាន់ទី២ កាន់តែចៃដន្យ)
+local function getHumanizedDelay(baseMin, baseMax)
+    local t = tick()
+    local wave = math.sin(t / (math.random(3, 7))) * 0.08 -- បន្ថែមភាពរលកមិនទៀងទាត់
+    local randomOffset = math.random(-35, 35) / 1000
+    return math.clamp(math.random(baseMin * 100, baseMax * 100) / 100 + wave + randomOffset, baseMin * 0.4, baseMax * 1.8)
+end
 
 local function getRodAndRemotes()
     local character = LocalPlayer.Character
@@ -64,7 +76,7 @@ local function getRodAndRemotes()
         for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
             if item:IsA("Tool") and (string.find(string.lower(item.Name), "rod") or item.Name == "Umbrella") then
                 item.Parent = character
-                task.wait(0.5)
+                task.wait(getHumanizedDelay(0.6, 1.2)) -- ពន្យារពេលបំពាក់ដងសន្ទូច
                 tool = item
                 break
             end
@@ -78,103 +90,45 @@ local function getRodAndRemotes()
     return nil, nil
 end
 
--- ==========================================
--- [កូដសម្រាប់ PC ដើមរបស់បង រក្សាទុកដដែល ១០០%]
--- ==========================================
-local function humanMouseClick()
-    local centerX = workspace.CurrentCamera.ViewportSize.X / 2
-    local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
-    pcall(function()
-        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
-        task.wait(math.random(3, 6) / 100)
-        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
-    end)
-end
-
-local function holdMouseLeftClick(seconds)
-    pcall(function()
-        local centerX = workspace.CurrentCamera.ViewportSize.X / 2
-        local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
-        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
-        task.wait(seconds)
-        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
-    end)
-end
-
+-- ========================================================
+-- [ប្រព័ន្ធ Shake ការពារការចាប់បាន (No-Pattern Shake)]
+-- ========================================================
 local function forceClickShake(shakeButton)
     if not shakeButton or not shakeButton.Visible then return end
     
     while shakeButton.Visible and _G.AutoFishingPerfectV16 do
         local connections = getconnections or get_signal_cons
+        
+        -- ក្លែងធ្វើការចុចលើទីតាំងចៃដន្យនៅលើអេក្រង់ (មិនមែនកូអរដោនេ 0, 0 ថេរទេ)
+        local screenWidth = workspace.CurrentCamera.ViewportSize.X
+        local screenHeight = workspace.CurrentCamera.ViewportSize.Y
+        local randomX = math.random(screenWidth * 0.4, screenWidth * 0.6)
+        local randomY = math.random(screenHeight * 0.4, screenHeight * 0.6)
+        
         if connections then
-            for _, clickedConnection in ipairs(connections(shakeButton.MouseButton1Click)) do clickedConnection:Fire() end
+            for _, clickedConnection in ipairs(connections(shakeButton.MouseButton1Click)) do 
+                clickedConnection:Fire() 
+            end
+            pcall(function()
+                for _, clickedConnection in ipairs(connections(shakeButton.Activated)) do 
+                    clickedConnection:Fire() 
+                end
+            end)
         end
         
         if ShakeSystem and ShakeSystem.isActive then
             pcall(function()
-                ShakeSystem:HandleClick(nil)
+                -- បន្ថែមល្បឿនចុចខុសៗគ្នា (ពេលខ្លះចុចលឿន ពេលខ្លះចុចយឺត)
+                if math.random(1, 10) > 3 then
+                    ShakeSystem:HandleClick(nil)
+                end
             end)
         end
-        task.wait(math.random(7, 12) / 100)
-    end
-    task.wait(0.15)
-    humanMouseClick()
-end
--- ==========================================
-
-
--- 🛠️ ផ្នែកបន្ថែម៖ បើរកឃើញថាជាទូរស័ព្ទ (Mobile) វានឹងប្តូរទៅប្រើប្រព័ន្ធ Touch ជំនួសដោយស្វ័យប្រវត្ត
--- (បើលេងលើ PC វានឹងរំលងផ្នែកនេះចោល ធ្វើឱ្យ PC រត់កូដចាស់ធម្មតា ១០០%)
-if UserInputService.TouchEnabled then
-    -- កែសម្រួលការចុចឱ្យត្រូវនឹង Mobile Touch
-    humanMouseClick = function()
-        local centerX = workspace.CurrentCamera.ViewportSize.X / 2
-        local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
-        pcall(function()
-            VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.Begin, centerX, centerY)
-            task.wait(math.random(3, 6) / 100)
-            VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.End, centerX, centerY)
-        end)
-    end
-
-    holdMouseLeftClick = function(seconds)
-        pcall(function()
-            local centerX = workspace.CurrentCamera.ViewportSize.X / 2
-            local centerY = workspace.CurrentCamera.ViewportSize.Y / 2
-            VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.Begin, centerX, centerY)
-            task.wait(seconds)
-            VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.End, centerX, centerY)
-        end)
-    end
-
-    -- កែសម្រួល Shake សម្រាប់ទូរស័ព្ទ (គាំទ្រការចុច Activated Event)
-    forceClickShake = function(shakeButton)
-        if not shakeButton or not shakeButton.Visible then return end
-        
-        while shakeButton.Visible and _G.AutoFishingPerfectV16 do
-            local connections = getconnections or get_signal_cons
-            if connections then
-                for _, clickedConnection in ipairs(connections(shakeButton.MouseButton1Click)) do clickedConnection:Fire() end
-                -- បន្ថែមសម្រាប់ Mobile Touch UI
-                pcall(function()
-                    for _, clickedConnection in ipairs(connections(shakeButton.Activated)) do clickedConnection:Fire() end
-                end)
-            end
-            
-            if ShakeSystem and ShakeSystem.isActive then
-                pcall(function()
-                    ShakeSystem:HandleClick(nil)
-                end)
-            end
-            task.wait(math.random(7, 12) / 100)
-        end
-        task.wait(0.15)
-        humanMouseClick()
+        task.wait(getHumanizedDelay(0.12, 0.25)) -- កើនឡើងការយឺតយ៉ាវបន្តិចដើម្បីឱ្យដូចមនុស្សចុចពិតៗ
     end
 end
 
-
--- Background Loops (រក្សារចនាសម្ព័ន្ធដើម)
+-- ប្រព័ន្ធតាមដានប៊ូតុង Shake
 task.spawn(function()
     local playerGui = LocalPlayer:WaitForChild("PlayerGui")
     local fishingGui = playerGui:WaitForChild("FishingGui", 5)
@@ -183,7 +137,7 @@ task.spawn(function()
         if shakeButton then
             shakeButton:GetPropertyChangedSignal("Visible"):Connect(function()
                 if shakeButton.Visible and _G.AutoFishingPerfectV16 then 
-                    task.wait(math.random(10, 25) / 100)
+                    task.wait(getHumanizedDelay(0.35, 0.70)) -- រង់ចាំបន្តិចមុនពេលចាប់ផ្តើម Shake (កុំឱ្យលឿនពេក)
                     forceClickShake(shakeButton) 
                 end
             end)
@@ -191,62 +145,131 @@ task.spawn(function()
     end
 end)
 
--- 🛠️ ផ្នែកកែសម្រួល៖ ប្តូរមកចុចទាញត្រីចំនួន ១៦ ទៅ ១៨ ដងច្បាស់លាស់
+-- ========================================================
+-- [ប្រព័ន្ធទាញត្រីបែបមនុស្ស (Organic / Semi-Auto Hooking)]
+-- ========================================================
 task.spawn(function()
     while true do
         task.wait(0.1)
         if _G.AutoFishingPerfectV16 and MinigameSystem and MinigameSystem:IsActive() then
-            local _, tapRemote = getRodAndRemotes()
             
-            -- កំណត់ចំនួនដងចៃដន្យចន្លោះពី ១៦ ទៅ ១៨ ដង តាមសំណូមពររបស់អ្នក
-            local requiredClicks = math.random(17, 26)
-            local clickCount = 0
-            
-            print("រកឃើញត្រីជាប់សន្ទូច! ចាប់ផ្តើមចុចទាញចំនួន: " .. requiredClicks .. " ដង")
-            
-            while MinigameSystem:IsActive() and _G.AutoFishingPerfectV16 and clickCount < requiredClicks do
-                if tapRemote then 
-                    tapRemote:FireServer() 
-                end
+            pcall(function()
+                local debug_getupvalues = debug.getupvalues or getupvalues
+                local debug_setupvalue = debug.setupvalue or setupvalue
                 
-                humanMouseClick()
-                clickCount = clickCount + 1
-                task.wait(math.random(11, 16) / 100) 
-            end
-            
+                if debug_getupvalues and debug_setupvalue then
+                    for _, upvalue in ipairs(debug_getupvalues(MinigameSystem.Start)) do
+                        if type(upvalue) == "table" and upvalue.active ~= nil then
+                            
+                            task.spawn(function()
+                                while MinigameSystem:IsActive() and _G.AutoFishingPerfectV16 do
+                                    -- បង្កើនភាគរយលេងលក្ខណៈធម្មជាតិ (២៥% ធ្វើជាលែងខុស ឬលែងដៃតិចៗ)
+                                    if math.random(1, 100) <= 25 then
+                                        upvalue.isAutoMode = false
+                                        task.wait(getHumanizedDelay(0.15, 0.45))
+                                    else
+                                        upvalue.isAutoMode = true
+                                    end
+                                    task.wait(getHumanizedDelay(0.18, 0.35))
+                                end
+                            end)
+                            
+                            break
+                        end
+                    end
+                end
+            end)
+
             while MinigameSystem:IsActive() do
                 task.wait(0.1)
             end
-            task.wait(1.0)
+            
+            -- កត់ត្រាចំនួនត្រីដែលស្ទូចបាន និងរៀបចំប្រព័ន្ធសម្រាក
+            fishCaughtSession = fishCaughtSession + 1
+            task.wait(getHumanizedDelay(1.5, 3.5))
         end
     end
 end)
 
+-- ========================================================
+-- [ប្រព័ន្ធបង់សន្ទូចស្វ័យប្រវត្តិ - កែសម្រួលថ្មីបំផុត និង Safe បំផុត]
+-- ========================================================
 task.spawn(function()
     while true do
-        task.wait(1.0)
+        task.wait(0.5)
+        
         if _G.AutoFishingPerfectV16 then
+            -- ប្រព័ន្ធសម្រាកស្វ័យប្រវត្ត (Auto Break System) ដើម្បីជៀសវាងការស្ទូចជាប់គ្នាមិនឈប់
+            if fishCaughtSession >= nextBreakLimit then
+                local breakTime = math.random(5, 15) -- សម្រាកពី ៥ ទៅ ១៥ វិនាទី
+                warn("[Anti-Cheat Safety] ស្គ្រីបកំពុងធ្វើការសម្រាករយៈពេល " .. tostring(breakTime) .. " វិនាទី ដើម្បីការពារគណនីរបស់អ្នក...")
+                task.wait(breakTime)
+                fishCaughtSession = 0
+                nextBreakLimit = math.random(6, 14) -- កំណត់ចំនួនគោលដៅបន្ទាប់ជាលក្ខណៈចៃដន្យ
+            end
+
             local currentRod, _ = getRodAndRemotes()
+            
             if currentRod then
                 local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
                 local fishingGui = playerGui and playerGui:FindFirstChild("FishingGui")
                 local shakeButton = fishingGui and fishingGui:FindFirstChild("ShakeButton")
                 local fishingFrame = fishingGui and fishingGui:FindFirstChild("Fishing")
                 
+                -- ពិនិត្យស្ថានភាពជាប់រវល់
                 local isBusy = false
                 if (shakeButton and shakeButton.Visible) or (fishingFrame and fishingFrame.Visible) then isBusy = true end
                 if (ShakeSystem and ShakeSystem.isActive) or (MinigameSystem and MinigameSystem:IsActive()) then isBusy = true end
+                if PowerBarSystem and PowerBarSystem:IsCharging() then isBusy = true end
                 
+                -- បើទំនេរ ទើបចាប់ផ្តើមបោះសន្ទូច
                 if not isBusy then
-                    currentRod:Activate()
-                    task.wait(0.2)
-                    holdMouseLeftClick(math.random(8, 12) / 10)
-                    task.wait(math.random(25, 35) / 10)
+                    pcall(function()
+                        task.wait(getHumanizedDelay(0.6, 1.4))
+                        
+                        -- ក្លែងធ្វើការចុចសាកកម្លាំងនៅលើកូអរដោនេចៃដន្យ (Random Screen Click Position)
+                        local screenWidth = workspace.CurrentCamera.ViewportSize.X
+                        local screenHeight = workspace.CurrentCamera.ViewportSize.Y
+                        local randomX = math.random(screenWidth * 0.3, screenWidth * 0.7)
+                        local randomY = math.random(screenHeight * 0.3, screenHeight * 0.7)
+                        
+                        VirtualInputManager:SendMouseButtonEvent(randomX, randomY, 0, true, game, 1)
+                        
+                        -- រង់ចាំឱ្យរបារកម្លាំងរត់ឡើងដល់ចំណុចល្អបំផុត
+                        local chargeTime = 0
+                        local maxChargeLimit = math.random(65, 88) / 100 -- សាកកម្លាំងចន្លោះ 65% ទៅ 88% ដើម្បីកុំឱ្យ Perfect រាល់ដងពេក
+                        
+                        while chargeTime < maxChargeLimit and _G.AutoFishingPerfectV16 do
+                            task.wait(0.05)
+                            chargeTime = chargeTime + 0.05
+                            
+                            if PowerBarSystem and PowerBarSystem:GetCurrentPower() >= math.random(80, 96) then
+                                break
+                            end
+                        end
+                        
+                        -- លែងដៃដើម្បីបោះសន្ទូច (Simulate Release)
+                        VirtualInputManager:SendMouseButtonEvent(randomX, randomY, 0, false, game, 1)
+                        
+                        -- បន្ថែម Micro-Rotation (បង្វិលខ្លួនតួអង្គបន្តិចៗរាល់ពេលបោះ ដើម្បីកុំឱ្យឈរធ្មឹងដដែលៗ)
+                        local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        if rootPart then
+                            pcall(function()
+                                local currentCFrame = rootPart.CFrame
+                                local randomAngle = math.rad(math.random(-5, 5)) -- បង្វិលឆ្វេងស្តាំប្រមាណ -៥ ទៅ ៥ អង្សារ
+                                rootPart.CFrame = currentCFrame * CFrame.Angles(0, randomAngle, 0)
+                            end)
+                        end
+                    end)
+                    
+                    -- ទុកពេលឱ្យកូនដុំសន្ទូចធ្លាក់ចូលទឹក និងការពារការចុចជាន់គ្នា
+                    task.wait(getHumanizedDelay(3.0, 5.0))
                 end
             end
         end
     end
 end)
+
 
 -- Essential Services
 local Players = game:GetService("Players")
@@ -442,6 +465,8 @@ local Toggle = Tab:CreateToggle({
    Flag = "AutoFishing16Flag", 
    Callback = function(Value)
        _G.AutoFishingPerfectV16 = Value
+       if not Value then
+           fishCaughtSession = 0
+       end
    end,
 })
-
