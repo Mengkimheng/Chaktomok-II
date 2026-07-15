@@ -528,6 +528,59 @@ local ToggleMobile = Tab:CreateToggle({
    end,
 })
 
+
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local GuiService = game:GetService("GuiService")
+local LocalPlayer = Players.LocalPlayer
+
+local function autoClick(button)
+    pcall(function()
+        -- ១. ស្វែងរកទីតាំងលំអៀងរបស់អេក្រង់ (Topbar Offset)
+        local inset = GuiService:GetGuiInset()
+        
+        -- ២. គណនាទីតាំងកណ្តាលពិតប្រាកដរបស់ Button (បូកបញ្ចូលទាំង Offset របស់អេក្រង់)
+        local x = button.AbsolutePosition.X + (button.AbsoluteSize.X / 2) + inset.X
+        local y = button.AbsolutePosition.Y + (button.AbsoluteSize.Y / 2) + inset.Y
+        
+        -- ៣. បញ្ជាឱ្យចុចចំផ្ចិតកណ្តាលប៊ូតុង
+        VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 1) -- ចុចចុះ
+        VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 1) -- ប្រលែងមកវិញ
+    end)
+end
+
+local Toggle = Tab:CreateToggle({
+   Name = "Auto Tap Mobile",
+   CurrentValue = false,
+   Flag = "AutoTapToggle", 
+   Callback = function(Value)
+       _G.AutoTap = Value -- កំណត់លក្ខខណ្ឌទៅតាមការចុច បើក/បិទ Toggle
+       
+       if _G.AutoTap then
+           print("[Auto Tap] ចាប់ផ្តើមដំណើរការ...")
+           
+           -- បង្កើត Thread ថ្មីសម្រាប់ Loop ចុចនៅពេល Toggle ត្រូវបានបើក (True)
+           task.spawn(function()
+               local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+               local FishingGui = PlayerGui:WaitForChild("FishingGui")
+
+               while _G.AutoTap do
+                   local OuterFrame = FishingGui:FindFirstChild("TapMobile")
+                   if OuterFrame then
+                       local RealButton = OuterFrame:FindFirstChild("TapMobile")
+                       if RealButton and RealButton.Visible then
+                           autoClick(RealButton)
+                       end
+                   end
+                   task.wait(1) -- ចុចរៀងរាល់ ១ វិនាទីម្តង
+               end
+               print("[Auto Tap] បានបញ្ឈប់។")
+           end)
+       end
+   end,
+})
+
+
 local Slider = Tab:CreateSlider({
     Name = '<font size="24"><b>ចំនួនចង់ទិញ</b></font>Amoun',
     Range = {0, 100},
