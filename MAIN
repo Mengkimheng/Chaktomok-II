@@ -316,7 +316,6 @@ end)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-
 local player = Players.LocalPlayer
 
 -- Configuration Setup
@@ -325,8 +324,8 @@ local spots = {
     "DeliverySpot4", "DeliverySpot5", "DeliverySpot6", "DeliverySpot7", 
     "DeliverySpot8", "DeliverySpot9"
 }
-local FOOD_ITEM_NAME = "Food" 
-local isScriptRunning = false -- Track toggle state
+local FOOD_ITEM_NAME = "Food" -- អាចប្តូរទៅ "FoodBox" ប្រសិនបើឈ្មោះក្នុងហ្គេមពិតប្រាកដគឺ FoodBox
+local isScriptRunning = false 
 
 -- Helper Functions
 local function humanWait(min, max)
@@ -334,20 +333,52 @@ local function humanWait(min, max)
     task.wait(randomTime)
 end
 
-local function hasFood()
+-- មុខងារចុច ProximityPrompt (កែសម្រួលឱ្យមានប្រសិទ្ធភាពខ្ពស់ជាងមុន)
+local function interactWithPrompt(prompt)
+    if prompt and prompt:IsA("ProximityPrompt") then
+        prompt.RequiresLineOfSight = false
+        
+        -- ប្រសិនបើ Executor របស់លោកអ្នកគាំទ្រ fireproximityprompt វានឹងចុចបានលឿនបំផុត
+        if fireproximityprompt then
+            fireproximityprompt(prompt)
+        else
+            prompt.HoldDuration = 0 -- កំណត់ឱ្យចុចភ្លាមៗ
+            task.wait(0.05)
+            prompt:InputHoldBegin()
+            task.wait(0.1) -- រង់ចាំបន្តិចដើម្បីឱ្យ Roblox ទទួលស្គាល់ការចុច
+            prompt:InputHoldEnd()
+        end
+    end
+end
+
+-- មុខងារពិនិត្យមើល និងស្វែងរកម្ហូប
+local function getFoodTool()
     local character = player.Character
-    if character and character:FindFirstChild(FOOD_ITEM_NAME) then return true end
-    if player.Backpack:FindFirstChild(FOOD_ITEM_NAME) then return true end
+    if character and character:FindFirstChild(FOOD_ITEM_NAME) then 
+        return character:FindFirstChild(FOOD_ITEM_NAME) 
+    end
+    if player.Backpack:FindFirstChild(FOOD_ITEM_NAME) then 
+        return player.Backpack:FindFirstChild(FOOD_ITEM_NAME) 
+    end
     
+    -- ករណីរកតាមឈ្មោះមិនចំ (ស្វែងរកពាក្យដែលមានជាប់ពាក្យ food)
     if character then
         for _, child in ipairs(character:GetChildren()) do
-            if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then return true end
+            if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then 
+                return child 
+            end
         end
     end
     for _, child in ipairs(player.Backpack:GetChildren()) do
-        if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then return true end
+        if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then 
+            return child 
+        end
     end
-    return false
+    return nil
+end
+
+local function hasFood()
+    return getFoodTool() ~= nil
 end
 
 local function findActiveDeliverySpot(deliveryLocation)
@@ -394,7 +425,8 @@ local function antiBanTeleport(targetPart)
     rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
     
     noclip:Disconnect()
-    humanWait(0.08, 0.18)
+    -- បន្ថែមពេលបន្តិចដើម្បីឱ្យតួអង្គធ្លាក់ចុះដល់ទីតាំងច្បាស់លាស់
+    task.wait(0.15)
 end
 
 -- Core Delivery Engine Run Routine
@@ -402,20 +434,24 @@ local function runDeliveryRoutine()
     while isScriptRunning do
         local character = player.Character or player.CharacterAdded:Wait()
         local rootPart = character:WaitForChild("HumanoidRootPart")
+        local humanoid = character:WaitForChild("Humanoid")
         
         local targetPart = workspace.Building["Prop Building"].FoodPickup
         local deliveryLocation = workspace:FindFirstChild("DeliveryLocation")
         
         print("--- Start New Anti-Ban Sequence ---")
 
-        -- Step 1: Collect Food
+        -- វគ្គទី ១: ទៅយកម្ហូប (Collect Food)
         if targetPart and rootPart and not hasFood() then
             local attempt = 0
-            while not hasFood() and attempt < 5 and isScriptRunning do
+            while not hasFood() and attempt < 8 and isScriptRunning do
                 attempt = attempt + 1
                 print("Teleporting to FoodPickup... Attempt: " .. attempt)
                 
                 antiBanTeleport(targetPart)
+                
+                -- រង់ចាំឱ្យហ្គេមទិន្នន័យទីតាំងរួចរាល់ (ចៀសវាងការចុចមិនទាន់)
+                task.wait(0.2) 
                 
                 local prompt = targetPart:FindFirstChildOfClass("ProximityPrompt")
                 if not prompt then
@@ -423,23 +459,26 @@ local function runDeliveryRoutine()
                 end
                 
                 if prompt then
-                    prompt.RequiresLineOfSight = false
-                    prompt.HoldDuration = 0 
-                    task.wait(0.02)
-                    prompt:InputHoldBegin()
-                    prompt:InputHoldEnd()
+                    interactWithPrompt(prompt)
                 else
                     print("[Warning] ProximityPrompt not found!")
                 end
-                task.wait(0.5) 
+                task.wait(0.4) -- រង់ចាំមើលថាតើទទួលបាន Food ហើយឬនៅមុនពេលរត់ Loop យកម្តងទៀត
             end
         end
 
         if not isScriptRunning then break end
         humanWait(0.2, 0.5)
 
-        -- Step 2: Deliver Food
+        -- វគ្គទី ២: យកទៅប្រគល់ (Deliver Food + Auto-Equip)
         if deliveryLocation and rootPart and hasFood() then
+            -- ស្វែងរក Tool ម្ហូប ហើយកាន់វាដាក់លើដៃ (Equip Tool)
+            local foodTool = getFoodTool()
+            if foodTool and foodTool.Parent == player.Backpack then
+                humanoid:EquipTool(foodTool)
+                task.wait(0.3) -- រង់ចាំឱ្យតួអង្គកាន់ជាប់ដៃសិន
+            end
+
             local activeSpot = nil
             local scanAttempt = 0
             
@@ -453,13 +492,13 @@ local function runDeliveryRoutine()
                 print("🎯 Found Spot: " .. activeSpot.Name .. " | Teleporting...")
                 antiBanTeleport(activeSpot)
                 
+                -- រង់ចាំឱ្យដល់ទីតាំងច្បាស់លាស់សិនមុនចុចប្រគល់
+                task.wait(0.2)
+                
                 local deliveryPrompt = activeSpot:FindFirstChildOfClass("ProximityPrompt")
                 if deliveryPrompt then
-                    deliveryPrompt.RequiresLineOfSight = false
-                    deliveryPrompt.HoldDuration = 0
-                    task.wait(0.02)
-                    deliveryPrompt:InputHoldBegin()
-                    deliveryPrompt:InputHoldEnd()
+                    interactWithPrompt(deliveryPrompt)
+                    print("បានចុចប្រគល់ (DeliveryPrompt) រួចរាល់!")
                 end
                 
                 humanWait(1.5, 2.5)
@@ -472,10 +511,9 @@ local function runDeliveryRoutine()
         if not isScriptRunning then break end
 
         -- Safe Cooldown Cycle
-        local cooldown = math.random(61, 71)
+        local cooldown = math.random(40, 63)
         print("--- Cycle Finished. Anticheat Spoof Cooldown: " .. cooldown .. "s ---")
         
-        -- Safe chunked wait loop to keep UI highly responsive to toggle turns
         for i = 1, cooldown do
             if not isScriptRunning then break end
             task.wait(1)
@@ -492,7 +530,6 @@ local Toggle = Tab:CreateToggle({
        isScriptRunning = Value
        
        if Value then
-           -- Spawns the automation sequence loop asynchronously
            task.spawn(runDeliveryRoutine)
        else
            print("🛑 Auto Deliver System Stopped.")
