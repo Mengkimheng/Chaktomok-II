@@ -559,7 +559,6 @@ local Toggle = Tab:CreateToggle({
        if _G.AutoTap then
            print("[Auto Tap] ចាប់ផ្តើមដំណើរការ...")
            
-           -- បង្កើត Thread ថ្មីសម្រាប់ Loop ចុចនៅពេល Toggle ត្រូវបានបើក (True)
            task.spawn(function()
                local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
                local FishingGui = PlayerGui:WaitForChild("FishingGui")
@@ -572,7 +571,10 @@ local Toggle = Tab:CreateToggle({
                            autoClick(RealButton)
                        end
                    end
-                   task.wait(1) -- ចុចរៀងរាល់ ១ វិនាទីម្តង
+                   
+                   -- ផ្លាស់ប្តូរពេលរង់ចាំចន្លោះពី 1.0 ដល់ 1.5 វិនាទី ដោយមិនថេរ
+                   local randomDelay = math.random(10, 15) / 10
+                   task.wait(randomDelay) 
                end
                print("[Auto Tap] បានបញ្ឈប់។")
            end)
