@@ -253,8 +253,8 @@ task.spawn(function()
                             end
                             VirtualInputManager:SendMouseButtonEvent(randomX, randomY, 0, false, game, 1)
                             
-                        elseif _G.FishingDeviceMode == "Mobile" and tapMobileButton and tapMobileButton.Visible then
-                            -- [ សម្រាប់ Mobile ] ------------------------------------------
+                        elseif _G.FishingDeviceMode == "Mobile" and tapMobileButton and tapMobileButton.Visible and tapMobileButton.AbsoluteSize.X > 0 then
+                            -- [ សម្រាប់ Mobile - Hold 1s & Random Wait ] ------------------------------------------
                             local position = tapMobileButton.AbsolutePosition
                             local size = tapMobileButton.AbsoluteSize
                             local x = position.X + (size.X / 2)
@@ -264,31 +264,18 @@ task.spawn(function()
                             x = x + inset.X
                             y = y + inset.Y
                             
-                            task.wait(getHumanizedDelay(0.35, 0.65))
+                            -- ១. ប៉ះម្រាមដៃចុះលើប៊ូតុង (Touch Begin)
+                            VirtualInputManager:SendTouchEvent("FishingTouchFinger", 0, x, y, game)
                             
-                            -- ចុចលើកទី១ (ចាប់ផ្តើមឡើងរបារកម្លាំង)
-                            VirtualInputManager:SendTouchEvent(1, Enum.UserInputState.Begin, Vector2.new(x, y))
-                            task.wait(0.02)
-                            VirtualInputManager:SendTouchEvent(1, Enum.UserInputState.End, Vector2.new(x, y))
+                            -- ២. រង់ចាំ ១ វិនាទី (ពេលកំពុងទាញត្រី)
+                            task.wait(1)
                             
-                            task.wait(0.12)
+                            -- ៣. ដកម្រាមដៃចេញវិញ (Touch End)
+                            VirtualInputManager:SendTouchEvent("FishingTouchFinger", 2, x, y, game)
                             
-                            local targetPower = math.random(75, 88)
-                            local timeout = 0
-                            local maxWaitTime = math.random(68, 82) / 100
-                            
-                            while timeout < maxWaitTime and _G.AutoFishingPerfectV16 do
-                                task.wait(0.01)
-                                timeout = timeout + 0.01
-                                if PowerBarSystem and PowerBarSystem:GetCurrentPower() >= targetPower then
-                                    break
-                                end
-                            end
-                            
-                            -- ចុចលើកទី២ (លែងដងសន្ទូចចេញ)
-                            VirtualInputManager:SendTouchEvent(1, Enum.UserInputState.Begin, Vector2.new(x, y))
-                            task.wait(0.02)
-                            VirtualInputManager:SendTouchEvent(1, Enum.UserInputState.End, Vector2.new(x, y))
+                            -- 🎯 គណនាពេលរង់ចាំ Random ចន្លោះពី 0.7 ទៅ 1.2 វិនាទី
+                            local randomWait = math.random(7, 12) / 10
+                            task.wait(randomWait)
                         end
                         
                         -- បន្ថែម Micro-Rotation (បង្វិលខ្លួនតួអង្គបន្តិចៗរាល់ពេលបោះ ដើម្បីកុំឱ្យឈរធ្មឹងដដែលៗ)
@@ -312,194 +299,7 @@ end)
 
 -- ========================================================
 -- [ ការបង្កើតប៊ូតុង Toggle ចំនួន ២ សម្រាប់ PC និង Mobile ]
--- ========================================================
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
-local player = Players.LocalPlayer
-
--- Configuration Setup
-local spots = {
-    "DeliverySpot", "DeliverySpot1", "DeliverySpot2", "DeliverySpot3", 
-    "DeliverySpot4", "DeliverySpot5", "DeliverySpot6", "DeliverySpot7", 
-    "DeliverySpot8", "DeliverySpot9"
-}
-local FOOD_ITEM_NAME = "Food" 
-local isScriptRunning = false -- Track toggle state
-
--- Helper Functions
-local function humanWait(min, max)
-    local randomTime = math.random(min * 100, max * 100) / 100
-    task.wait(randomTime)
-end
-
-local function hasFood()
-    local character = player.Character
-    if character and character:FindFirstChild(FOOD_ITEM_NAME) then return true end
-    if player.Backpack:FindFirstChild(FOOD_ITEM_NAME) then return true end
-    
-    if character then
-        for _, child in ipairs(character:GetChildren()) do
-            if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then return true end
-        end
-    end
-    for _, child in ipairs(player.Backpack:GetChildren()) do
-        if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then return true end
-    end
-    return false
-end
-
-local function findActiveDeliverySpot(deliveryLocation)
-    if not deliveryLocation then return nil end
-    for _, spotName in ipairs(spots) do
-        local spotPart = deliveryLocation:FindFirstChild(spotName)
-        if spotPart and spotPart:IsA("BasePart") then
-            if math.abs(spotPart.Transparency - 0.4) < 0.05 then
-                return spotPart
-            end
-        end
-    end
-    return nil
-end
-
--- Anti-Ban Teleport Engine
-local function antiBanTeleport(targetPart)
-    local character = player.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    if not rootPart or not targetPart then return end
-    
-    rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-    rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-    
-    local noclip = RunService.Stepped:Connect(function()
-        if character then
-            for _, part in pairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
-        end
-    end)
-    
-    local offsetX = (math.random(-10, 10) / 10)
-    local offsetZ = (math.random(-10, 10) / 10)
-    local targetPos = targetPart.Position + Vector3.new(offsetX, 2.0, offsetZ)
-    
-    rootPart.CFrame = CFrame.new(targetPos)
-    
-    rootPart.Anchored = true
-    task.wait(0.05)
-    rootPart.Anchored = false
-    
-    rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-    rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-    
-    noclip:Disconnect()
-    humanWait(0.08, 0.18)
-end
-
--- Core Delivery Engine Run Routine
-local function runDeliveryRoutine()
-    while isScriptRunning do
-        local character = player.Character or player.CharacterAdded:Wait()
-        local rootPart = character:WaitForChild("HumanoidRootPart")
-        
-        local targetPart = workspace.Building["Prop Building"].FoodPickup
-        local deliveryLocation = workspace:FindFirstChild("DeliveryLocation")
-        
-        print("--- Start New Anti-Ban Sequence ---")
-
-        -- Step 1: Collect Food
-        if targetPart and rootPart and not hasFood() then
-            local attempt = 0
-            while not hasFood() and attempt < 5 and isScriptRunning do
-                attempt = attempt + 1
-                print("Teleporting to FoodPickup... Attempt: " .. attempt)
-                
-                antiBanTeleport(targetPart)
-                
-                local prompt = targetPart:FindFirstChildOfClass("ProximityPrompt")
-                if not prompt then
-                    prompt = workspace.Building["Prop Building"].FoodPickup:FindFirstChildOfClass("ProximityPrompt")
-                end
-                
-                if prompt then
-                    prompt.RequiresLineOfSight = false
-                    prompt.HoldDuration = 0 
-                    task.wait(0.02)
-                    prompt:InputHoldBegin()
-                    prompt:InputHoldEnd()
-                else
-                    print("[Warning] ProximityPrompt not found!")
-                end
-                task.wait(0.5) 
-            end
-        end
-
-        if not isScriptRunning then break end
-        humanWait(0.2, 0.5)
-
-        -- Step 2: Deliver Food
-        if deliveryLocation and rootPart and hasFood() then
-            local activeSpot = nil
-            local scanAttempt = 0
-            
-            while not activeSpot and scanAttempt < 10 and isScriptRunning do
-                scanAttempt = scanAttempt + 1
-                activeSpot = findActiveDeliverySpot(deliveryLocation)
-                if not activeSpot then task.wait(0.1) end
-            end
-            
-            if activeSpot and isScriptRunning then
-                print("🎯 Found Spot: " .. activeSpot.Name .. " | Teleporting...")
-                antiBanTeleport(activeSpot)
-                
-                local deliveryPrompt = activeSpot:FindFirstChildOfClass("ProximityPrompt")
-                if deliveryPrompt then
-                    deliveryPrompt.RequiresLineOfSight = false
-                    deliveryPrompt.HoldDuration = 0
-                    task.wait(0.02)
-                    deliveryPrompt:InputHoldBegin()
-                    deliveryPrompt:InputHoldEnd()
-                end
-                
-                humanWait(1.5, 2.5)
-                print("✅ Successfully Delivered!")
-            else
-                print("[Warning] No active delivery zone found!")
-            end
-        end
-
-        if not isScriptRunning then break end
-
-        -- Safe Cooldown Cycle
-        local cooldown = math.random(61, 71)
-        print("--- Cycle Finished. Anticheat Spoof Cooldown: " .. cooldown .. "s ---")
-        
-        -- Safe chunked wait loop to keep UI highly responsive to toggle turns
-        for i = 1, cooldown do
-            if not isScriptRunning then break end
-            task.wait(1)
-        end
-    end
-end
-
--- Rayfield UI Toggle Linkage
-local Toggle = Tab:CreateToggle({
-   Name = '<font size="24"><b>ដឹកអីវ៉ាន​</b></font>Delivery',
-   CurrentValue = false,
-   Flag = "AutoDeliverFlag", 
-   Callback = function(Value)
-       isScriptRunning = Value
-       
-       if Value then
-           -- Spawns the automation sequence loop asynchronously
-           task.spawn(runDeliveryRoutine)
-       else
-           print("🛑 Auto Deliver System Stopped.")
-       end
-   end,
-})
-
+-- ======================================================== 
 local TogglePC = Tab:CreateToggle({
    Name = '<font size="24"><b>ស្ទូចស្វ័យប្រវត្ត (PC)</b></font> Auto Fishing PC',
    CurrentValue = false,
@@ -526,25 +326,4 @@ local ToggleMobile = Tab:CreateToggle({
            fishCaughtSession = 0
        end
    end,
-})
-
-local Slider = Tab:CreateSlider({
-    Name = '<font size="24"><b>ចំនួនចង់ទិញ</b></font>Amoun',
-    Range = {0, 100},
-    Increment = 10,
-    Suffix = "Bait",
-    CurrentValue = 10,
-    Flag = "BaitAmount", 
-    Callback = function(Value)
-        -- We don't need to fire the remote here
-    end,
-})
-
-local Button = Tab:CreateButton({
-    Name = '<font size="24"><b>ចុចទិញ</b></font>ទាល់ទៅជិតNPC',
-    Callback = function()
-        -- Directly pulls the current number from the slider's setting
-        local amount = Slider.CurrentValue
-        game:GetService("ReplicatedStorage"):WaitForChild("BuyBaitEvent"):FireServer(amount)
-    end,
 })
