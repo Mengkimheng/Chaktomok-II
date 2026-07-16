@@ -612,7 +612,7 @@ local Toggle = Tab:CreateToggle({
 
 -- បង្កើត Toggle នៅក្នុង Rayfield UI
 local Toggle = Tab:CreateToggle({
-   Name = '<font size="24"><b>លក់ពេលអីវ៉ានពេញ</b></font>Sell All',
+   Name = '<font size="24"><b>លក់ត្រីពេលអីវ៉ានពេញ</b></font>Sell All',
    CurrentValue = false,
    Flag = "AutoSellToggle", -- ប្រើ Flag ផ្សេងដើម្បីកុំឱ្យជាន់គ្នាជាមួយ Elements ផ្សេងទៀត
    Callback = function(Value)
