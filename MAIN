@@ -40,6 +40,35 @@ local Window = Rayfield:CreateWindow({
 
 local Tab = Window:CreateTab("Farm") -- Title, Image
 
+
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local LocalPlayer = Players.LocalPlayer
+
+-- Function សម្រាប់ចុច UI Object ដោយកំណត់ទីតាំងលំអៀង (Offset)
+local function autoClickUIWithOffset(guiObject)
+    if guiObject and guiObject.AbsolutePosition and guiObject.AbsoluteSize then
+        
+        -- កំណត់ចម្ងាយដែលចង់ឱ្យចុចចុះក្រោមពីចំណុចកណ្តាល (គិតជា Pixel)
+        -- បើចង់ឱ្យចុះក្រោមទៀត បង្កើនលេខនេះ។ បើចង់ឱ្យឡើងលើ ដាក់លេខដក (ឧទាហរណ៍ -10)
+        local yOffset = 45
+
+        -- គណនារកចំណុចកណ្តាល X
+        local centerX = guiObject.AbsolutePosition.X + (guiObject.AbsoluteSize.X / 2)
+        
+        -- គណនារកចំណុចកណ្តាល Y រួចបូកថែម Offset ដើម្បីឱ្យចុចចុះក្រោមបន្តិច
+        local centerYWithOffset = guiObject.AbsolutePosition.Y + (guiObject.AbsoluteSize.Y / 2) + yOffset
+        
+        -- បញ្ជាឱ្យប្រព័ន្ធចុច (Touch/Click) ទៅលើទីតាំងដែលបានគណនា
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerYWithOffset, 0, true, game, 1)
+        task.wait(0.05) -- រង់ចាំបន្តិចដើម្បីឱ្យប្រព័ន្ធទទួលដឹង
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerYWithOffset, 0, false, game, 1)
+        
+        -- បោះពុម្ពប្រាប់ដើម្បីស្រួល Check (អាចលុបចេញបានបើលែងត្រូវការ)
+        -- print("Clicked at Y offset: " .. yOffset)
+    end
+end
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
@@ -565,57 +594,52 @@ local ToggleMobile = Tab:CreateToggle({
 })
 
 
-local Players = game:GetService("Players")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local GuiService = game:GetService("GuiService")
-local LocalPlayer = Players.LocalPlayer
 
-local function autoClick(button)
-    pcall(function()
-        -- ១. ស្វែងរកទីតាំងលំអៀងរបស់អេក្រង់ (Topbar Offset)
-        local inset = GuiService:GetGuiInset()
-        
-        -- ២. គណនាទីតាំងកណ្តាលពិតប្រាកដរបស់ Button (បូកបញ្ចូលទាំង Offset របស់អេក្រង់)
-        local x = button.AbsolutePosition.X + (button.AbsoluteSize.X / 2) + inset.X
-        local y = button.AbsolutePosition.Y + (button.AbsoluteSize.Y / 2) + inset.Y
-        
-        -- ៣. បញ្ជាឱ្យចុចចំផ្ចិតកណ្តាលប៊ូតុង
-        VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 1) -- ចុចចុះ
-        VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 1) -- ប្រលែងមកវិញ
-    end)
-end
 
 local Toggle = Tab:CreateToggle({
-   Name = "Auto Tap Mobile",
-   CurrentValue = false,
-   Flag = "AutoTapToggle", 
-   Callback = function(Value)
-       _G.AutoTap = Value -- កំណត់លក្ខខណ្ឌទៅតាមការចុច បើក/បិទ Toggle
-       
-       if _G.AutoTap then
-           print("[Auto Tap] ចាប់ផ្តើមដំណើរការ...")
-           
-           task.spawn(function()
-               local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-               local FishingGui = PlayerGui:WaitForChild("FishingGui")
+    Name = "Auto Tap Mobile (Adjusted)",
+    CurrentValue = false,
+    Flag = "AutoTapToggle", 
+    Callback = function(Value)
+        _G.AutoTap = Value
+        
+        if _G.AutoTap then
+            print("[Auto Tap] ចាប់ផ្តើមដំណើរការ (ចុចចុះក្រោមបន្តិច)...")
+            
+            task.spawn(function()
+                local success, err = pcall(function()
+                    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+                    if not PlayerGui then return end
+                    
+                    local FishingGui = PlayerGui:WaitForChild("FishingGui", 5)
+                    if not FishingGui then return end
 
-               while _G.AutoTap do
-                   local OuterFrame = FishingGui:FindFirstChild("TapMobile")
-                   if OuterFrame then
-                       local RealButton = OuterFrame:FindFirstChild("TapMobile")
-                       if RealButton and RealButton.Visible then
-                           autoClick(RealButton)
-                       end
-                   end
-                   
-                   -- ផ្លាស់ប្តូរពេលរង់ចាំចន្លោះពី 1.0 ដល់ 1.5 វិនាទី ដោយមិនថេរ
-                   local randomDelay = math.random(10, 15) / 10
-                   task.wait(randomDelay) 
-               end
-               print("[Auto Tap] បានបញ្ឈប់។")
-           end)
-       end
-   end,
+                    while _G.AutoTap do
+                        -- ស្វែងរកតាម Path: ...FishingGui.TapMobile.ImageLabel
+                        local TapMobile = FishingGui:FindFirstChild("TapMobile")
+                        if TapMobile then
+                            local ImageLabel = TapMobile:FindFirstChild("ImageLabel")
+                            
+                            -- ពិនិត្យមើលថាតើវាបង្ហាញលើអេក្រង់ (Visible) ទើបចុច
+                            if ImageLabel and ImageLabel.Visible then
+                                autoClickUIWithOffset(ImageLabel) -- ប្រើ Function ដែលមាន Offset
+                            end
+                        end
+                        
+                        -- ផ្លាស់ប្តូរពេលរង់ចាំចន្លោះពី 1.0 ដល់ 1.5 វិនាទី
+                        local randomDelay = math.random(10, 15) / 10
+                        task.wait(randomDelay) 
+                    end
+                end)
+                
+                if not success then
+                    warn("[Auto Tap Error]: " .. tostring(err))
+                end
+                
+                print("[Auto Tap] បានបញ្ឈប់។")
+            end)
+        end
+    end,
 })
 
 
