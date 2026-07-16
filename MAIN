@@ -40,6 +40,50 @@ local Window = Rayfield:CreateWindow({
 
 local Tab = Window:CreateTab("Farm") -- Title, Image
 
+--Sell
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+-- បង្កើត Variable សម្រាប់បើក ឬបិទ Auto Sell (លំនាំដើមគឺ បិទ)
+_G.AutoSell = false
+
+-- ស្វែងរក Remote Event ដែល Server ប្រាប់ថាកាបូបពេញ
+local InventoryFull = ReplicatedStorage:WaitForChild("InventoryRemotes"):WaitForChild("InventoryFull")
+
+-- មុខងារចុច Button លក់ត្រីទាំងអស់
+local function clickSellButton()
+    -- ពិនិត្យមើលថាតើ Toggle ត្រូវបានបើកដែរឬទេ
+    if not _G.AutoSell then return end
+
+    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if not playerGui then return end
+
+    -- ស្វែងរក Button លក់ត្រីតាម Path ដែលអ្នកបានរកឃើញ
+    local sellBtn = playerGui:FindFirstChild("FishingShopGui")
+        and playerGui.FishingShopGui:FindFirstChild("Main")
+        and playerGui.FishingShopGui.Main:FindFirstChild("Content")
+        and playerGui.FishingShopGui.Main.Content:FindFirstChild("SellPanel")
+        and playerGui.FishingShopGui.Main.Content.SellPanel:FindFirstChild("BtnBar")
+        and playerGui.FishingShopGui.Main.Content.SellPanel.BtnBar:FindFirstChild("SellAllBtn")
+
+    if sellBtn then
+        -- ធ្វើការចុចលក់ភ្លាមៗតាមរយៈ getconnections
+        for _, connection in ipairs(getconnections(sellBtn.MouseButton1Click)) do
+            connection:Fire()
+        end
+        print("[Auto-Sell] កាបូបពេញ! បានចុចលក់ត្រីទាំងអស់ដោយស្វ័យប្រវត្តិរួចរាល់។")
+    else
+        warn("[Auto-Sell] រកមិនឃើញ SellAllBtn ឡើយ!")
+    end
+end
+
+-- ចាប់ផ្តើមរង់ចាំស្តាប់រាល់ពេលដែលកាបូបពេញ
+InventoryFull.OnClientEvent:Connect(function()
+    -- ប្រើ task.defer ដើម្បីកុំឱ្យរំខានដល់ UI Notifier ដើមរបស់ហ្គេម
+    task.defer(clickSellButton)
+end)
+--Sell
 
 local Players = game:GetService("Players")
 local VirtualInputManager = game:GetService("VirtualInputManager")
@@ -564,6 +608,22 @@ local Toggle = Tab:CreateToggle({
        end
    end,
 })
+
+
+-- បង្កើត Toggle នៅក្នុង Rayfield UI
+local Toggle = Tab:CreateToggle({
+   Name = '<font size="24"><b>លក់ពេលអីវ៉ានពេញ</b></font>Sell All',
+   CurrentValue = false,
+   Flag = "AutoSellToggle", -- ប្រើ Flag ផ្សេងដើម្បីកុំឱ្យជាន់គ្នាជាមួយ Elements ផ្សេងទៀត
+   Callback = function(Value)
+       -- កំណត់តម្លៃ _G.AutoSell ទៅតាមការចុច Toggle (true = បើក, false = បិទ)
+       _G.AutoSell = Value
+       print("[Auto-Sell] ស្ថានភាពបច្ចុប្បន្ន៖ " .. (Value and "បើក" or "បិទ"))
+   end,
+})
+
+print("[Auto-Sell] ប្រព័ន្ធត្រៀមខ្លួនជាស្រេច! រង់ចាំការបញ្ជាពី Toggle។")
+
 
 local TogglePC = Tab:CreateToggle({
    Name = '<font size="24"><b>ស្ទូចស្វ័យប្រវត្ត (PC)</b></font> Auto Fishing PC',
