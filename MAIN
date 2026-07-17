@@ -757,7 +757,7 @@ end
 
 -- បង្កើត Toggle នៅក្នុង Rayfield Tab របស់អ្នក
 local Toggle = Tab2:CreateToggle({
-    Name = '<font size="24"><b>ទិញទឺក/ម្ហូបញុាំខ្លួនអែង</b></font>Auto buy/eat',
+    Name = "Auto Buy & Eat (Burger/Water)",
     CurrentValue = false,
     Flag = "AutoBuyEatToggle", 
     Callback = function(Value)
