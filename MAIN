@@ -39,6 +39,7 @@ local Window = Rayfield:CreateWindow({
 })
 
 local Tab = Window:CreateTab("Farm") -- Title, Image
+local Tab2 = Window:CreateTab("Store") -- Title, Image
 
 local Players = game:GetService("Players")
 local VirtualInputManager = game:GetService("VirtualInputManager")
@@ -721,5 +722,72 @@ local Button = Tab:CreateButton({
         -- Directly pulls the current number from the slider's setting
         local amount = Slider.CurrentValue
         game:GetService("ReplicatedStorage"):WaitForChild("BuyBaitEvent"):FireServer(amount)
+    end,
+})
+
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StoreBuyItem = ReplicatedStorage:WaitForChild("StoreBuyItem")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- បង្កើត អនុគមន៍សម្រាប់ឱ្យតួអង្គកាន់ និងញ៉ាំវត្ថុ
+local function equipAndEat(itemName)
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local backpack = LocalPlayer:WaitForChild("Backpack")
+    
+    -- ស្វែងរកវត្ថុនៅក្នុង Backpack
+    local tool = backpack:FindFirstChild(itemName)
+    
+    -- បើសិនជារកមិនឃើញនៅក្នុង Backpack ទេ ក្រឡេកមើលក្នុងដៃតួអង្គ
+    if not tool and character then
+        tool = character:FindFirstChild(itemName)
+    end
+    
+    if tool and tool:IsA("Tool") then
+        -- បំពាក់វត្ថុនោះទៅឱ្យតួអង្គកាន់នឹងដៃ
+        tool.Parent = character
+        task.wait(0.5) -- រង់ចាំឱ្យតួអង្គកាន់ជាប់ស្រួលបួល
+        
+        -- ធ្វើការចុចប្រើប្រាស់ (Eat)
+        tool:Activate()
+        task.wait(1.5) -- រង់ចាំឱ្យសកម្មភាពញ៉ាំចប់ជាស្ថាពរ
+    end
+end
+
+-- បង្កើត Toggle នៅក្នុង Rayfield Tab របស់អ្នក
+local Toggle = Tab2:CreateToggle({
+    Name = "Auto Buy & Eat (Burger/Water)",
+    CurrentValue = false,
+    Flag = "AutoBuyEatToggle", 
+    Callback = function(Value)
+        -- កំណត់តម្លៃ _G variable ទៅតាមស្ថានភាព Toggle (true ឬ false)
+        _G.AutoBuyAndEat = Value
+        
+        -- ប្រសិនបើ Toggle ត្រូវបានបើក (true) នោះវានឹងដំណើរការ Loop ភ្លាមៗ
+        if _G.AutoBuyAndEat then
+            task.spawn(function()
+                while _G.AutoBuyAndEat do
+                    -- ១. ធ្វើការបញ្ជាទិញពី Server
+                    StoreBuyItem:FireServer("Cheeze burger")
+                    task.wait(0.5)
+                    StoreBuyItem:FireServer("water")
+                    
+                    task.wait(2) -- រង់ចាំ ២ វិនាទីឱ្យ Item ធ្លាក់ចូលក្នុងកាតាប (Backpack)
+                    
+                    -- ២. ធ្វើការកាន់នឹងដៃរួចញ៉ាំម្តងមួយៗ (ពិនិត្យលក្ខខណ្ឌម្ដងទៀតក្រឡេកលោអ្នកប្រើប្រាស់បិទ Toggle ភ្លាមៗ)
+                    if _G.AutoBuyAndEat then equipAndEat("Cheeze burger") end
+                    if _G.AutoBuyAndEat then equipAndEat("water") end
+                    
+                    -- ៣. រង់ចាំរយៈពេល ៥ នាទី (៣០០ វិនាទី) មុននឹងចាប់ផ្តើមជុំបន្ទាប់
+                    -- ប្រើប្រាស់ Loop តូចដើម្បីឱ្យងាយស្រួលបិទភ្លាមៗ (មិនបាច់រង់ចាំដល់គ្រប់ ៣០០ វិនាទីពេញ)
+                    local secondsWaiting = 0
+                    while _G.AutoBuyAndEat and secondsWaiting < 300 do
+                        task.wait(1)
+                        secondsWaiting = secondsWaiting + 1
+                    end
+                end
+            end)
+        end
     end,
 })
