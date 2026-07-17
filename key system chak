@@ -1,6 +1,5 @@
 -- << Configuration >> --
 local Whitelisted_Users = {
-    "2B9K2",
     "Klgkdor",
     "SPC_44555",
     "Trasmos07",
