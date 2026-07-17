@@ -1,64 +1,12 @@
 -- << Configuration >> --
 local Whitelisted_Users = {
-    "2B9K2", -- ⚠️ ឈ្មោះទី១
-    "ZEREF885",            -- ⚠️ ឈ្មោះទី២
-    "LIONELMESSI101JR",-- ⚠️ លោកអ្នកអាចថែមឈ្មោះបន្តបន្ទាប់ទៀតបានដោយប្រើសញ្ញាក្បៀស (,)
-    "BFQX_lenny2",
-    "Mastercreator2012",
-    "wheniwasyourmen1629",
-    "Blacksigma12345lulu",
-    "SATORUGOJO202673",
-    "yingyb099",
-    "NeonBearSpark",
-    "Nit20103",
-    "tech_hack4",
-    "seang_640",
-    "kouneng0505",
-    "AlexSantro71",
-    "seang_640",
-    "SaKuRa_gg132",
-    "Brak_Reaksa",
-    "XxTurb0PixelatedN0va",
-    "kira007302",
-    "Bropol98",
-    "kingmonzin",
-    "Garaa1269",
-    "PiSUNF13",
-    "Ah_C34",
-    "corazon_835",
-    "Rozuk16",
-    "Caccie_lampa",
-    "Sa123zz191200",
-    "aque_ace60",
-    "Danzakaisi3",
-    "KillAnime4",
-    "Bunlayll008",
-    "AkoSiMambert",
-    "KirkRose4906",
-    "Burikets1178",
-    "BNT98_noob",
-    "Broheng0110",
-    "Thanlosing",
-    "W4ZXR",
-    "Iuebrknd",
-    "XxSparklyDuckxX2002",
-    "Jbfght36",
-    "TTR_9760",
-    "rattany9",
-    "HRrhKPzN2307",
-    "C7YOUFF",
-    "net1138",
-    "vovovo_398",
-    "SOKTORN2009",
-    "MONL_241",
-    "XxPh03nixFlam3Mystic",
-    "GOJOOO12343",
-    "Hongza_0",
-    "Khgchfjcyfc",
-    "MARAcr7777",
-    "leap100a1",
-    "Hong_LyKG",
-    "SIPDER_man20124"
+    "2B9K2",
+    "Klgkdor",
+    "SPC_44555",
+    "Trasmos07",
+    "Xx_WarriorMagicSnowB"
+    "sovandara356754"
+    
 }
 local Target_Key = "MY_EXCLUSIVE_KEY_2026" -- ⚠️ សូមប្តូរ Key នេះតាមចិត្តរបស់អ្នក
 
@@ -68,6 +16,6 @@ local LocalPlayer = Players.LocalPlayer
 
 -- ឆែកមើលថាតើឈ្មោះ LocalPlayer មាននៅក្នុងតារាង Whitelist ដែរឬទេ
 if not table.find(Whitelisted_Users, LocalPlayer.Name) then
-    LocalPlayer:Kick(" តម្រូវអោយបង់​ ៣០០០រៀល ទាក់ទងទៅ(Telegram: @TWOBKTWOSELLER )")
+    LocalPlayer:Kick(" តម្រូវអោយបង់​ ៨០០០ពាន់រៀល ទាក់ទងទៅ(Telegram: @TWOBKTWOSELLER )")
     return
 end
