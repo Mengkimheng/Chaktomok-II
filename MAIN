@@ -367,6 +367,7 @@ end)
 -- [ ការបង្កើតប៊ូតុង Toggle ចំនួន ២ សម្រាប់ PC និង Mobile ]
 -- ========================================================
 
+--delevery
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
@@ -385,19 +386,18 @@ local function humanWait(min, max)
     task.wait(randomTime)
 end
 
--- មុខងារចុច ProximityPrompt (កែសម្រួលឱ្យមានប្រសិទ្ធភាពខ្ពស់ជាងមុន)
+-- មុខងារចុច ProximityPrompt
 local function interactWithPrompt(prompt)
     if prompt and prompt:IsA("ProximityPrompt") then
         prompt.RequiresLineOfSight = false
         
-        -- ប្រសិនបើ Executor របស់លោកអ្នកគាំទ្រ fireproximityprompt វានឹងចុចបានលឿនបំផុត
         if fireproximityprompt then
             fireproximityprompt(prompt)
         else
-            prompt.HoldDuration = 0 -- កំណត់ឱ្យចុចភ្លាមៗ
+            prompt.HoldDuration = 0 
             task.wait(0.05)
             prompt:InputHoldBegin()
-            task.wait(0.1) -- រង់ចាំបន្តិចដើម្បីឱ្យ Roblox ទទួលស្គាល់ការចុច
+            task.wait(0.1) 
             prompt:InputHoldEnd()
         end
     end
@@ -413,7 +413,6 @@ local function getFoodTool()
         return player.Backpack:FindFirstChild(FOOD_ITEM_NAME) 
     end
     
-    -- ករណីរកតាមឈ្មោះមិនចំ (ស្វែងរកពាក្យដែលមានជាប់ពាក្យ food)
     if character then
         for _, child in ipairs(character:GetChildren()) do
             if child:IsA("Tool") and string.find(string.lower(child.Name), "food") then 
@@ -477,7 +476,6 @@ local function antiBanTeleport(targetPart)
     rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
     
     noclip:Disconnect()
-    -- បន្ថែមពេលបន្តិចដើម្បីឱ្យតួអង្គធ្លាក់ចុះដល់ទីតាំងច្បាស់លាស់
     task.wait(0.15)
 end
 
@@ -501,8 +499,6 @@ local function runDeliveryRoutine()
                 print("Teleporting to FoodPickup... Attempt: " .. attempt)
                 
                 antiBanTeleport(targetPart)
-                
-                -- រង់ចាំឱ្យហ្គេមទិន្នន័យទីតាំងរួចរាល់ (ចៀសវាងការចុចមិនទាន់)
                 task.wait(0.2) 
                 
                 local prompt = targetPart:FindFirstChildOfClass("ProximityPrompt")
@@ -515,25 +511,19 @@ local function runDeliveryRoutine()
                 else
                     print("[Warning] ProximityPrompt not found!")
                 end
-                task.wait(0.4) -- រង់ចាំមើលថាតើទទួលបាន Food ហើយឬនៅមុនពេលរត់ Loop យកម្តងទៀត
+                task.wait(0.4) -- រង់ចាំមើលថាតើទទួលបាន Food ហើយឬនៅ
             end
         end
 
         if not isScriptRunning then break end
         humanWait(0.2, 0.5)
 
-        -- វគ្គទី ២: យកទៅប្រគល់ (Deliver Food + Auto-Equip)
+        -- វគ្គទី ២: យកទៅប្រគល់ (Deliver Food + ពិនិត្យរហូតដល់បាត់ពីដៃ)
         if deliveryLocation and rootPart and hasFood() then
-            -- ស្វែងរក Tool ម្ហូប ហើយកាន់វាដាក់លើដៃ (Equip Tool)
-            local foodTool = getFoodTool()
-            if foodTool and foodTool.Parent == player.Backpack then
-                humanoid:EquipTool(foodTool)
-                task.wait(0.3) -- រង់ចាំឱ្យតួអង្គកាន់ជាប់ដៃសិន
-            end
-
             local activeSpot = nil
             local scanAttempt = 0
             
+            -- ស្វែងរកទីតាំងផ្ញើដែលសកម្ម
             while not activeSpot and scanAttempt < 10 and isScriptRunning do
                 scanAttempt = scanAttempt + 1
                 activeSpot = findActiveDeliverySpot(deliveryLocation)
@@ -541,20 +531,42 @@ local function runDeliveryRoutine()
             end
             
             if activeSpot and isScriptRunning then
-                print("🎯 Found Spot: " .. activeSpot.Name .. " | Teleporting...")
-                antiBanTeleport(activeSpot)
+                print("🎯 Found Spot: " .. activeSpot.Name .. " | Starting Delivery Loop...")
                 
-                -- រង់ចាំឱ្យដល់ទីតាំងច្បាស់លាស់សិនមុនចុចប្រគល់
-                task.wait(0.2)
-                
-                local deliveryPrompt = activeSpot:FindFirstChildOfClass("ProximityPrompt")
-                if deliveryPrompt then
-                    interactWithPrompt(deliveryPrompt)
-                    print("បានចុចប្រគល់ (DeliveryPrompt) រួចរាល់!")
+                local deliveryAttempt = 0
+                -- Loop នេះនឹងរត់រហូតដល់ `hasFood()` ត្រឡប់មក false (ម្ហូបបាត់ពីដៃ/កាតាប) ឬគ្រប់ ៨ ដង
+                while hasFood() and deliveryAttempt < 8 and isScriptRunning do
+                    deliveryAttempt = deliveryAttempt + 1
+                    print("🚀 Delivering... Attempt: " .. deliveryAttempt)
+                    
+                    -- ធានាថាបានកាន់ម្ហូបជាប់នឹងដៃជានិច្ចពេលកំពុងប្រគល់
+                    local foodTool = getFoodTool()
+                    if foodTool and foodTool.Parent == player.Backpack then
+                        humanoid:EquipTool(foodTool)
+                        task.wait(0.2)
+                    end
+                    
+                    -- Teleport ទៅកាន់ទីតាំងដាក់ម្ហូប
+                    antiBanTeleport(activeSpot)
+                    task.wait(0.2) -- ទុកពេលឱ្យហ្គេមទិន្នន័យដើរទាន់
+                    
+                    local deliveryPrompt = activeSpot:FindFirstChildOfClass("ProximityPrompt")
+                    if deliveryPrompt then
+                        interactWithPrompt(deliveryPrompt)
+                        print("បានចុចប្រគល់ (DeliveryPrompt)...")
+                    else
+                        print("[Warning] Delivery ProximityPrompt not found!")
+                    end
+                    
+                    task.wait(0.5) -- រង់ចាំកន្លះវិនាទីដើម្បីផ្ទៀងផ្ទាត់ថាម្ហូបបាត់ពីដៃហើយឬនៅ មុននឹងបន្ត Loop ទៅមុខទៀត
                 end
                 
-                humanWait(1.5, 2.5)
-                print("✅ Successfully Delivered!")
+                if not hasFood() then
+                    print("✅ Successfully Delivered! Food is gone from inventory.")
+                    humanWait(1.5, 2.5)
+                else
+                    print("[Warning] Delivery loop finished but food is still in inventory!")
+                end
             else
                 print("[Warning] No active delivery zone found!")
             end
@@ -588,7 +600,7 @@ local Toggle = Tab:CreateToggle({
        end
    end,
 })
-
+--delevery
 --Sell
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
