@@ -1,30 +1,3 @@
--- << Configuration >> --
-local Whitelisted_Users = {
-    "Klgkdor",
-    "SPC_44555",
-    "Trasmos07",
-    "Ccc16778",
-    "sovandara356754",
-    "Meng228652",
-    "Mobpkrp",
-    "Kim_Meng77",
-    "TTRA168168",
-    "aroxx_lol"
-    
-}
-local Target_Key = "MY_EXCLUSIVE_KEY_2026" -- ⚠️ សូមប្តូរ Key នេះតាមចិត្តរបស់អ្នក
-
--- << Whitelist Check (Multi-Username) >> --
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
--- ឆែកមើលថាតើឈ្មោះ LocalPlayer មាននៅក្នុងតារាង Whitelist ដែរឬទេ
-if not table.find(Whitelisted_Users, LocalPlayer.Name) then
-    LocalPlayer:Kick(" តម្រូវអោយបង់​ ៨០០០ពាន់រៀល ទាក់ទងទៅ(Telegram: @TWOBKTWOSELLER )")
-    return
-end
-
-
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
    Name = "Chaktomuk II",
